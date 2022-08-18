@@ -20,7 +20,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - ⬜️ Connect with Pexels API
 - ⬜️ Load images (lazy loading, blurring, etc)
 - ⬜️ Navigation (scroll load more, etc)
-- ⬜️ Deploy to Vercel
+- ✅ Deploy to Vercel
+
+## Demo
+
+https://pexels-nextjs-git-main-fjcero.vercel.app
 
 ## Deploy on Vercel
 
