@@ -6,15 +6,31 @@ import {
 import type { GetServerSideProps, NextPage } from "next";
 import Head from "next/head";
 import Image from "next/image";
-import { Photo, Photos } from "pexels";
+import { Photo } from "pexels";
 import { Fragment, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
+
 import { Layout } from "../components/Layout";
 import { getCurated } from "../libs/pexels";
 import styles from "../styles/Home.module.css";
 
 const PER_PAGE = 10;
 const photosQueryId = "photos";
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  let page = 1;
+  const queryClient = new QueryClient();
+
+  if (context.query.page) {
+    page = parseInt(String(context.query.page));
+  }
+
+  await queryClient.prefetchQuery([photosQueryId], async () => [
+    await getCurated(page, PER_PAGE),
+  ]);
+
+  return { props: { dehydratedState: dehydrate(queryClient) } };
+};
 
 const Home: NextPage = () => {
   const { ref, inView } = useInView();
@@ -41,7 +57,7 @@ const Home: NextPage = () => {
       getNextPageParam: (lastPage) => {
         const url = new URL(lastPage?.next_page);
         const page = Number(url.searchParams.get("page"));
-        return page + 1;
+        return page;
       },
     }
   );
@@ -66,57 +82,48 @@ const Home: NextPage = () => {
         ) : status === "error" ? (
           <span>Error: {error?.message}</span>
         ) : (
-          <section className="grid-container">
-            {data?.pages?.map((page: any) => (
-              <Fragment key={page}>
-                {page.photos?.map((image: Photo) => (
-                  <div key={image.id}>
-                    <Image
-                      src={image.src.original}
-                      alt={image?.alt}
-                      height={250}
-                      width={"100%"}
-                      layout="fill"
-                      loading="lazy"
-                    />
-                    <div className="text">
-                      <p>Name: {image.photographer}</p>
+          <section className="container">
+            <div className="flex flex-wrap justify-center">
+              {data?.pages?.map((page: any) => (
+                <Fragment key={page.next_page}>
+                  {page.photos?.map((image: Photo) => (
+                    <div
+                      key={image.id}
+                      className="flex m-4 p-4 relative w-[360px] h-[582px] rounded-md drop-shadow-lg image-card"
+                      style={{ backgroundColor: image.avg_color }}
+                    >
+                      <Image
+                        src={image.src.large2x}
+                        alt={image?.alt}
+                        layout="fill"
+                        objectFit="contain"
+                        quality={100}
+                        loading="lazy"
+                        placeholder="blur"
+                        blurDataURL={image.src.medium}
+                      />
                     </div>
-                  </div>
-                ))}
-              </Fragment>
-            ))}
-            <button
-              ref={ref}
-              onClick={() => fetchNextPage()}
-              disabled={!hasNextPage || isFetchingNextPage}
-            >
-              {isFetchingNextPage
-                ? "Loading more..."
-                : hasNextPage
-                ? "Load Newer"
-                : "Nothing more to load"}
-            </button>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
           </section>
         )}
+        <button
+          ref={ref}
+          onClick={() => fetchNextPage()}
+          disabled={!hasNextPage || isFetchingNextPage}
+          className="bg-pink-600 hover:bg-pink-800 text-white font-bold py-2 px-4 rounded"
+        >
+          {isFetchingNextPage
+            ? "Loading more..."
+            : hasNextPage
+            ? "Load Newer"
+            : "Nothing more to load"}
+        </button>
       </Layout>
     </div>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  let page = 1;
-  const queryClient = new QueryClient();
-
-  if (context.query.page) {
-    page = parseInt(String(context.query.page));
-  }
-
-  await queryClient.prefetchQuery([photosQueryId], async () => [
-    await getCurated(page, PER_PAGE),
-  ]);
-
-  return { props: { dehydratedState: dehydrate(queryClient) } };
 };
 
 export default Home;

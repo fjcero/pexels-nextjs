@@ -17,9 +17,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Todo list
 
 - ✅ Boilerplate with Nextjs + Typescript
-- ⬜️ Connect with Pexels API
-- ⬜️ Load images (lazy loading, blurring, etc)
+- ✅ Connect with Pexels API
 - ✅ Navigation with infinite scroll
+- ✅ Loading images with default placeholder (blur + default color)
+- ✅ Basic styling
 - ✅ Deploy to Vercel
 
 ## Overview
@@ -38,6 +39,22 @@ For experimenting the demo online, you can go to:
 2. After scrolling, the `button` for loading more has a `IntersectionObserver` listener to automatically load 10 more images when reached
 3. To prevent scrollings ad infinitum, a hard limit of 10 pages is set, so whenever the user exceeds the first 10 pages while scrolling, the `Load more` button needs to be clicked
 4. For fetching data in the Client side we are using `react-query` which adds a caching layer on top of `fetch`. This is really convenient when reloading things that might be 
+
+### Styling
+
+For styling, the library used was [Tailwind](https://tailwindcss.com/). This brings some advantages:
+
+- CSS Reset by default
+- Easily extend CSS Modules
+- Support for multiple user preferences by default
+  - `prefers-color-scheme`: uses OS local settings
+  - `prefers-reduced-motion`: disables hover effects for images
+
+### Image Loading
+
+NextJS Image Optimization strategy is used, but it could also be leveraged on the Pexels API response.
+
+One thing added by the `<Image />` component is to support blur and blurred data while fetching the images form the source, which in addition with a default background color for the image creates a better UX.
 
 ## Deploy on Vercel
 
