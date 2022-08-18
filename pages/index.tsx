@@ -6,12 +6,11 @@ import {
 import type { GetServerSideProps, NextPage } from "next";
 import Head from "next/head";
 import Image from "next/image";
-import { Photo } from "pexels";
 import { Fragment, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 
 import { Layout } from "../components/Layout";
-import { getCurated } from "../libs/pexels";
+import { getCurated, Photo } from "../libs/pexels";
 import styles from "../styles/Home.module.css";
 
 const PER_PAGE = 10;
@@ -49,12 +48,12 @@ const Home: NextPage = () => {
       keepPreviousData: true,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      getPreviousPageParam: (firstPage) => {
+      getPreviousPageParam: (firstPage: any) => {
         const url = new URL(firstPage?.next_page);
         const page = Number(url.searchParams.get("page"));
         return page > 2 ? page - 2 : 1;
       },
-      getNextPageParam: (lastPage) => {
+      getNextPageParam: (lastPage: any) => {
         const url = new URL(lastPage?.next_page);
         const page = Number(url.searchParams.get("page"));
         return page;
@@ -62,11 +61,13 @@ const Home: NextPage = () => {
     }
   );
 
+  const pagesLength = Number(data?.pages?.length || 1);
+
   useEffect(() => {
-    if (inView && Number(data?.pages?.length || 1) < 10) {
+    if (inView && pagesLength < 10) {
       fetchNextPage();
     }
-  }, [inView]);
+  }, [pagesLength, fetchNextPage, inView]);
 
   return (
     <div className={styles.container}>
@@ -80,7 +81,7 @@ const Home: NextPage = () => {
         {status === "loading" ? (
           <p>Loading...</p>
         ) : status === "error" ? (
-          <span>Error: {error?.message}</span>
+          <span>Error: {(error as any)?.message}</span>
         ) : (
           <section className="container">
             <div className="flex flex-wrap justify-center">
