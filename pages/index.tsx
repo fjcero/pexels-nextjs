@@ -1,30 +1,56 @@
-import { dehydrate, QueryClient, useQuery } from "@tanstack/react-query";
+import {
+  dehydrate,
+  QueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import type { GetServerSideProps, NextPage } from "next";
 import Head from "next/head";
 import Image from "next/image";
-import { useRouter } from "next/router";
-import { useState } from "react";
+import { Photo, Photos } from "pexels";
+import { Fragment, useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 import { Layout } from "../components/Layout";
-
-import * as pexels from "../libs/pexels";
+import { getCurated } from "../libs/pexels";
 import styles from "../styles/Home.module.css";
 
 const PER_PAGE = 10;
+const photosQueryId = "photos";
 
 const Home: NextPage = () => {
-  const router = useRouter();
-  const [page, setPage] = useState(parseInt(String(router.query.page)) || 1);
-  const { data } = useQuery(
-    ["data", page],
-    async () => await pexels.getCurated(page, PER_PAGE),
+  const { ref, inView } = useInView();
+
+  const {
+    data,
+    error,
+    status,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery(
+    [photosQueryId],
+    async ({ pageParam = 1 }) => await getCurated(pageParam, PER_PAGE),
     {
       keepPreviousData: true,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
+      getPreviousPageParam: (firstPage) => {
+        const url = new URL(firstPage?.next_page);
+        const page = Number(url.searchParams.get("page"));
+        return page > 2 ? page - 2 : 1;
+      },
+      getNextPageParam: (lastPage) => {
+        const url = new URL(lastPage?.next_page);
+        const page = Number(url.searchParams.get("page"));
+        return page + 1;
+      },
     }
   );
 
-  console.log(data);
+  useEffect(() => {
+    if (inView && Number(data?.pages?.length || 1) < 10) {
+      fetchNextPage();
+    }
+  }, [inView]);
 
   return (
     <div className={styles.container}>
@@ -35,22 +61,44 @@ const Home: NextPage = () => {
       </Head>
       <Layout>
         <h1 className={styles.title}>Pexel + Next.js!</h1>
-        <section className="grid-container">
-          {data?.photos?.map((image: any) => (
-            <article key={image.id}>
-              <Image
-                src={image.url}
-                alt={image.alt}
-                height={250}
-                width={"100%"}
-                loading="lazy"
-              />
-              <div className="text">
-                <p>Name: {image.photographer}</p>
-              </div>
-            </article>
-          ))}
-        </section>
+        {status === "loading" ? (
+          <p>Loading...</p>
+        ) : status === "error" ? (
+          <span>Error: {error?.message}</span>
+        ) : (
+          <section className="grid-container">
+            {data?.pages?.map((page: any) => (
+              <Fragment key={page}>
+                {page.photos?.map((image: Photo) => (
+                  <div key={image.id}>
+                    <Image
+                      src={image.src.original}
+                      alt={image?.alt}
+                      height={250}
+                      width={"100%"}
+                      layout="fill"
+                      loading="lazy"
+                    />
+                    <div className="text">
+                      <p>Name: {image.photographer}</p>
+                    </div>
+                  </div>
+                ))}
+              </Fragment>
+            ))}
+            <button
+              ref={ref}
+              onClick={() => fetchNextPage()}
+              disabled={!hasNextPage || isFetchingNextPage}
+            >
+              {isFetchingNextPage
+                ? "Loading more..."
+                : hasNextPage
+                ? "Load Newer"
+                : "Nothing more to load"}
+            </button>
+          </section>
+        )}
       </Layout>
     </div>
   );
@@ -64,10 +112,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     page = parseInt(String(context.query.page));
   }
 
-  await queryClient.prefetchQuery(
-    ["characters", page],
-    async () => await pexels.getCurated(page, PER_PAGE)
-  );
+  await queryClient.prefetchQuery([photosQueryId], async () => [
+    await getCurated(page, PER_PAGE),
+  ]);
 
   return { props: { dehydratedState: dehydrate(queryClient) } };
 };
